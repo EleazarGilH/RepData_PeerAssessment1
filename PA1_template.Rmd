@@ -1,20 +1,129 @@
 # Reproducible Research: Peer Assessment 1
 
-
 ## Loading and preprocessing the data
-
+Load the activity dataset 
+```{r, echo=TRUE}
+data = read.csv("activity.csv", header = TRUE)
+```
 
 
 ## What is mean total number of steps taken per day?
+Plotting the histogram of the total number of steps taken each day
 
+```{r, echo=TRUE}
+steps_per_day = sapply(split(data$steps, data$date), sum)
+hist(steps_per_day, col = "red", main = "Number of steps", ylim = c(0, 
+    40))
+```
+The mean and median total number of steps taken per day are:
 
+```{r,echo=TRUE}
+print(mean(steps_per_day, na.rm = TRUE), digits = 7)
+print(median(steps_per_day, na.rm = TRUE), digits = 7)
+```
 
 ## What is the average daily activity pattern?
 
+Plotting of the average number of steps taken daily vs the 5-minute interval number.
+```{r,echo=TRUE}
+avg_steps_per_interval = sapply(split(data$steps, data$interval), mean, na.rm = TRUE)
+plot(avg_steps_per_interval, type = "l", , xlab = "Interval", ylab = "Number of steps",main = "Average activity pattern")
+```
 
+
+Then, the 5-minute interval containing the maximum daily number of steps is:
+
+```{r,echo=TRUE}
+names(avg_steps_per_interval)[avg_steps_per_interval == max(avg_steps_per_interval)]
+```
 
 ## Imputing missing values
 
+The original dataset contains some missing values:
+
+```{r,echo=TRUE}
+sum(is.na(data$steps))
+```
+
+
+We consider the average number of steps of the respective intervals to impute the missing values 
+
+```{r,echo=TRUE}
+data2 = data
+for (i in 1:nrow(data2)) {
+    if (is.na(data2[i, "steps"])) {
+        interval = as.character(data2[i, "interval"])
+        data2[i, "steps"] = avg_steps_per_interval[interval]
+    }
+}
+```
+
+Now, there are no missing values in the new/complete dataset
+
+```{r,echo=TRUE}
+sum(is.na(data2$steps))
+```
+
+For the complete data set we plot the histogram of the total number of steps taken each day and calculate  the mean and median of the total number of steps taken per day
+
+```{r,echo=TRUE}
+total.steps.per.day = sapply(split(data2$steps, data2$date), 
+    sum)
+hist(total.steps.per.day, col = "blue", ylim = c(0, 40), main = "Number of steps - complete dataset")
+```
+
+```{r,echo=TRUE}
+print(mean(total.steps.per.day, na.rm = TRUE), digits = 7)
+
+print(median(total.steps.per.day, na.rm = TRUE), digits = 7)
+
+```
+Our method for imputing missing values give us:
+
+The mean of total number of steps per day does not differ the from results in the first part.
+
+The median of total number of steps per day changes and is no longer an integer. The reason is that we used the average number of steps per interval, which are not always intergers, to replace missing values.
+
+Replacing missing values generally increases the total daily number of steps. The frequencies of some buckets in the new histogram are higher than in the old.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+I created a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+```{r,echo=TRUE}
+data2$weekday = weekdays(as.Date(data2$date, format = "%Y-%m-%d"))
+data2$weekday.type = factor(ifelse(data2$weekday == "Sunday" | data2$weekday == 
+    "Saturday", "weekend", "weekday"), levels = c("weekday", "weekend"))
+```
+
+Calculate the average number of steps per interval, group by weekday and by weekend day
+
+```{r,echo=TRUE}
+data2.weekdays = data2[data2$weekday.type == "weekday", ]
+data2.weekend = data2[data2$weekday.type == "weekend", ]
+avg.steps.per.interval.weekdays = sapply(split(data2.weekdays$steps, data2.weekdays$interval), 
+    mean)
+avg.steps.per.interval.weekend = sapply(split(data2.weekend$steps, data2.weekend$interval), 
+    mean)
+```
+Construct the plot for weekday and weekend day
+
+
+```{r,echo=TRUE}
+DoPlot = function() {
+    par(mfrow = c(2, 1), mar = c(4, 5, 2, 2))
+    plot(avg.steps.per.interval.weekend, type = "l", yaxt = "n", ylim = c(0, 
+        250), xlim = c(0, 300), main = "weekend", ylab = "", xlab = "Interval")
+    axis(side = 4, at = seq(0, 250, 50), labels = seq(0, 250, 50))
+    plot(avg.steps.per.interval.weekdays, type = "l", ylim = c(0, 250), xlim = c(0, 
+        300), main = "weekday", ylab = "", xlab = "Interval")
+    par(mfrow = c(1, 1), mar = c(3, 2, 2, 2))
+    mtext(text = "Number of steps", side = 2)
+    par(mar = c(5, 5, 5, 2))
+}
+
+DoPlot()
+```
+
+We observe that activity on the weekends is more active compared to the weekdays.
